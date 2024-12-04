@@ -19,17 +19,16 @@ import {
 } from "@mui/material";
 import { AwsRegion, Queue, SqsMessage } from "../types";
 import CreateQueueDialog from "../components/CreateQueueDialog";
-import Alert from "../components/Alert";
 import useInterval from "../hooks/useInterval";
 import SendMessageDialog from "../components/SendMessageDialog";
 import { callApi } from "../api/Http";
 import MessageItem from "../components/MessageItem";
 import QueueIcon from "@mui/icons-material/CalendarViewWeek";
 import Box from "@mui/material/Box";
+import { useAlert } from "../components/AlertProvider";
 
 const a11yProps = (id: string, index: number) => {
   return {
-    key: index,
     "aria-controls": `queue-${id}-${index}`,
   };
 };
@@ -39,9 +38,10 @@ const Overview = () => {
   const [queues, setQueues] = useState([] as Queue[]);
   const [messages, setMessages] = useState([] as SqsMessage[]);
   const [reload, triggerReload] = useState(true);
-  const [error, setError] = useState("");
   const [disabledStatus, setDisabledStatus] = useState(true);
   const [region, setRegion] = useState({ region: "" } as AwsRegion);
+
+  const { showAlert } = useAlert();
 
   useInterval(async () => {
     await receiveMessageFromCurrentQueue();
@@ -69,9 +69,13 @@ const Overview = () => {
           setDisabledStatus(true);
         }
       },
-      onError: setError,
+      onError: showError,
     });
   }, [reload]);
+
+  const showError = (error: string) => {
+    showAlert(error, 'error');
+  };
 
   const selectQueue = (event: React.MouseEvent<HTMLLIElement, MouseEvent>) => {
     setListItemIndex(event.currentTarget.value);
@@ -85,7 +89,7 @@ const Overview = () => {
         action: "GetMessages",
         queue: queues[listItemIndex],
         onSuccess: setMessages,
-        onError: setError,
+        onError: showError,
       });
     }
   };
@@ -96,7 +100,7 @@ const Overview = () => {
       action: "GetRegion",
       onSuccess: setRegion,
       queue: { QueueName: "" } as Queue,
-      onError: setError,
+      onError: showError,
     });
   };
 
@@ -110,7 +114,7 @@ const Overview = () => {
           triggerReload(!reload);
         }, 1000);
       },
-      onError: setError,
+      onError: showError,
     });
   };
 
@@ -122,7 +126,7 @@ const Overview = () => {
       onSuccess: () => {
         setMessages([]);
       },
-      onError: setError,
+      onError: showError,
     });
   };
 
@@ -137,7 +141,7 @@ const Overview = () => {
           triggerReload(!reload);
         }, 1000);
       },
-      onError: setError,
+      onError: showError,
     });
   };
 
@@ -148,7 +152,7 @@ const Overview = () => {
         queues[listItemIndex]?.QueueName.endsWith(".fifo") &&
         !message.messageAttributes?.MessageGroupId
       ) {
-        setError(
+        showError(
           "You need to set a MessageGroupID when sending Messages to a FIFO queue",
         );
         return;
@@ -159,10 +163,10 @@ const Overview = () => {
         queue: queues[listItemIndex],
         message: message,
         onSuccess: () => {},
-        onError: setError,
+        onError: showError,
       });
     } else {
-      setError("Could not send message to non-existent queue");
+      showError("Could not send message to non-existent queue");
     }
   };
 
@@ -233,6 +237,7 @@ const Overview = () => {
                 onClick={selectQueue}
                 value={index}
                 disablePadding
+                key={index}
               >
                 <ListItemButton selected={index === listItemIndex}>
                   <ListItemIcon>
@@ -262,15 +267,6 @@ const Overview = () => {
           </Toolbar>
         </Grid>
         <Grid size={{ xs: 12 }}>
-          {error !== "" ? (
-            <Container maxWidth="md">
-              <Alert
-                message={error}
-                severity={"error"}
-                onClose={() => setError("")}
-              />
-            </Container>
-          ) : null}
           {queues?.length === 0 ? (
             <Container maxWidth="md">
               <MuiAlert severity="info">
@@ -286,14 +282,16 @@ const Overview = () => {
               value={listItemIndex}
               index={index}
               {...a11yProps("tabpanel", index)}
+              key={index}
             >
               <Grid container spacing={2}>
                 {messages?.map((message, index) => (
-                  <Grid size={{ xs: 12 }} {...a11yProps("gridItem", index)}>
+                  <Grid key={index} size={{ xs: 12 }} {...a11yProps("gridItem", index)}>
                     <Paper>
                       <MessageItem
                         data={message}
                         {...a11yProps("messageItem", index)}
+                        key={index}
                       />
                     </Paper>
                   </Grid>

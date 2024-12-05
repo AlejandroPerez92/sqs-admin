@@ -89,7 +89,7 @@ const Overview = () => {
         action: "GetMessages",
         queue: queues[listItemIndex],
         onSuccess: setMessages,
-        onError: showError,
+        onError: (error) => showError(`Error receiving messages from queue ${queueUrl} ${error}`),
       });
     }
   };
@@ -114,7 +114,7 @@ const Overview = () => {
           triggerReload(!reload);
         }, 1000);
       },
-      onError: showError,
+      onError: (error) => showError(`Error creating queue ${error}`),
     });
   };
 
@@ -126,7 +126,7 @@ const Overview = () => {
       onSuccess: () => {
         setMessages([]);
       },
-      onError: showError,
+      onError: (error) => showError(`Error purging queue ${error}`),
     });
   };
 
@@ -141,7 +141,7 @@ const Overview = () => {
           triggerReload(!reload);
         }, 1000);
       },
-      onError: showError,
+      onError: (error) => showError(`Error deleting queue ${error}`),
     });
   };
 
@@ -163,7 +163,7 @@ const Overview = () => {
         queue: queues[listItemIndex],
         message: message,
         onSuccess: () => {},
-        onError: showError,
+        onError: (error) => showError(`Error sending message ${error}`),
       });
     } else {
       showError("Could not send message to non-existent queue");
